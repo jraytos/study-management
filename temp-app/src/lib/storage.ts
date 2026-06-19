@@ -1,61 +1,54 @@
-export interface SubtaskColumn {
-  id: string;
-  name: string;
-}
-
 export interface Study {
   id: string;
   name: string;
   createdAt: string;
-  subtaskColumns: SubtaskColumn[]; // study-level column definitions, up to 100
+  numColumns: number; // 0–100, defined at study level
 }
 
-export type SubtaskColor = "gray" | "red" | "green";
+export type ItemColor = "gray" | "red" | "green";
 
-export interface TaskSubtask {
-  columnId: string;
-  checked: boolean;
-  color: SubtaskColor;
-  description: string;
-  images: string[]; // base64 data URLs
+/** One column cell within a task row — fully independent data object */
+export interface ColumnItem {
+  color: ItemColor;    // background color of this cell
+  description: string; // optional text
+  images: string[];    // max 2 base64 data URLs
 }
 
 export interface Task {
   id: string;
   studyId: string;
   no: number;
-  description: string;
-  images: string[]; // base64 data URLs
-  subtasks: TaskSubtask[];
-  boxPath: string;
+  description: string; // task-level description (left panel)
+  images: string[];    // task-level images, max 2
+  boxPath: string;     // box file path (right fixed column)
+  items: ColumnItem[]; // one per column — each owns color/description/images
 }
-
-export type ColumnKey = keyof Omit<Task, "id" | "studyId">;
 
 export interface ColumnVisibility {
   no: boolean;
   description: boolean;
   images: boolean;
-  subtasks: boolean;
-  boxPath: boolean;
 }
 
-const STUDIES_KEY = "as_studies";
-const TASKS_PREFIX = "as_tasks_";
+const STUDIES_KEY    = "as_studies";
+const TASKS_PREFIX   = "as_tasks_";
 const COL_VIS_PREFIX = "as_colvis_";
 
 function isBrowser() {
   return typeof window !== "undefined";
 }
 
-// Normalise a raw study object from localStorage
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normaliseStudy(s: any): Study {
   return {
     id: s.id,
     name: s.name,
     createdAt: s.createdAt,
-    subtaskColumns: Array.isArray(s.subtaskColumns) ? s.subtaskColumns : [],
+    numColumns: typeof s.numColumns === "number"
+      ? s.numColumns
+      : Array.isArray(s.subtaskColumns)
+        ? s.subtaskColumns.length
+        : 0,
   };
 }
 
@@ -86,23 +79,29 @@ export function getStudyById(id: string): Study | undefined {
   return getStudies().find((s) => s.id === id);
 }
 
-// Normalise a raw task from localStorage to the current TaskSubtask[] format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normaliseColumnItem(raw: any): ColumnItem {
+  const color: ItemColor =
+    raw?.color === "red" || raw?.color === "green" ? raw.color : "gray";
+  return {
+    color,
+    description: raw?.description ?? "",
+    images: Array.isArray(raw?.images) ? (raw.images as string[]).slice(0, 2) : [],
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normaliseTask(t: any): Task {
-  let subtasks: TaskSubtask[];
-
-  if (Array.isArray(t.subtasks) && t.subtasks.length > 0 && "columnId" in t.subtasks[0]) {
-    // Already in new format
-    subtasks = t.subtasks;
-  } else {
-    // Old format (Subtask[] with id/text/color, or subtask1-5 strings) — drop legacy data
-    subtasks = [];
-  }
-
   const images: string[] = Array.isArray(t.images)
-    ? t.images
+    ? (t.images as string[]).slice(0, 2)
     : typeof t.images === "string" && t.images
     ? [t.images]
+    : [];
+
+  const rawItems: unknown[] = Array.isArray(t.items)
+    ? t.items
+    : Array.isArray(t.subtasks)
+    ? t.subtasks
     : [];
 
   return {
@@ -111,8 +110,8 @@ function normaliseTask(t: any): Task {
     no: t.no,
     description: t.description ?? "",
     images,
-    subtasks,
     boxPath: t.boxPath ?? "",
+    items: rawItems.map(normaliseColumnItem),
   };
 }
 
@@ -136,8 +135,6 @@ export const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
   no: true,
   description: true,
   images: true,
-  subtasks: true,
-  boxPath: true,
 };
 
 export function getColumnVisibility(studyId: string): ColumnVisibility {

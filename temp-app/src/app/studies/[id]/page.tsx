@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import {
   Study,
   Task,
-  SubtaskColumn,
   ColumnVisibility,
   getStudyById,
   getTasks,
@@ -17,9 +16,10 @@ import {
 } from "@/lib/storage";
 import { TaskTable } from "@/components/TaskTable";
 import { ColumnToggle } from "@/components/ColumnToggle";
-import { AddTaskDialog } from "@/components/AddTaskDialog";
+import { TaskDialog, TaskFormData } from "@/components/TaskDialog";
+import { CreateStudyDialog } from "@/components/CreateStudyDialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Pencil } from "lucide-react";
 
 export default function StudyPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,61 +29,54 @@ export default function StudyPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [visibility, setVisibility] = useState<ColumnVisibility | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     const s = getStudyById(id);
-    if (!s) {
-      router.replace("/");
-      return;
-    }
+    if (!s) { router.replace("/"); return; }
     setStudy(s);
     setTasks(getTasks(id));
     setVisibility(getColumnVisibility(id));
   }, [id, router]);
 
   const handleTasksChange = useCallback(
-    (updated: Task[]) => {
-      setTasks(updated);
-      saveTasks(id, updated);
-    },
+    (updated: Task[]) => { setTasks(updated); saveTasks(id, updated); },
     [id]
   );
 
   const handleVisibilityChange = useCallback(
-    (vis: ColumnVisibility) => {
-      setVisibility(vis);
-      saveColumnVisibility(id, vis);
-    },
+    (vis: ColumnVisibility) => { setVisibility(vis); saveColumnVisibility(id, vis); },
     [id]
   );
 
-  // Called when Add Task modal submits — receives task draft + (possibly updated) column list
-  const handleAddTask = useCallback(
-    (
-      draft: { description: string; images: string[]; boxPath: string },
-      columns: SubtaskColumn[]
-    ) => {
-      // Persist updated column list back to the study
-      if (study) {
-        const updatedStudy: Study = { ...study, subtaskColumns: columns };
-        setStudy(updatedStudy);
-        saveStudy(updatedStudy);
-      }
-
+  // Add mode — no taskId passed
+  const handleAddSubmit = useCallback(
+    (data: TaskFormData) => {
+      if (!study) return;
       const newTask: Task = {
         id: generateId(),
         studyId: id,
         no: tasks.length + 1,
-        description: draft.description,
-        images: draft.images,
-        subtasks: [], // filled in by user directly in the table
-        boxPath: draft.boxPath,
+        description: data.description,
+        images: data.images,
+        boxPath: data.boxPath,
+        items: data.items,
       };
       const updated = [...tasks, newTask];
       setTasks(updated);
       saveTasks(id, updated);
     },
     [id, tasks, study]
+  );
+
+  const handleEditStudy = useCallback(
+    (name: string, numColumns: number) => {
+      if (!study) return;
+      const updated: Study = { ...study, name, numColumns };
+      saveStudy(updated);
+      setStudy(updated);
+    },
+    [study]
   );
 
   if (!study || !visibility) return null;
@@ -96,9 +89,19 @@ export default function StudyPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold truncate">{study.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold truncate">{study.name}</h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+              {tasks.length} task{tasks.length !== 1 ? "s" : ""} · {study.numColumns} column{study.numColumns !== 1 ? "s" : ""}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -114,17 +117,27 @@ export default function StudyPage() {
       <main className="max-w-screen-2xl mx-auto px-6 py-6">
         <TaskTable
           tasks={tasks}
-          subtaskColumns={study.subtaskColumns}
+          numColumns={study.numColumns}
           visibility={visibility}
           onChange={handleTasksChange}
         />
       </main>
 
-      <AddTaskDialog
+      {/* Add Task — same form as Edit, no pre-fill */}
+      <TaskDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        onSubmit={handleAddTask}
-        subtaskColumns={study.subtaskColumns}
+        numColumns={study.numColumns}
+        onSubmit={handleAddSubmit}
+      />
+
+      {/* Edit Study */}
+      <CreateStudyDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSubmit={handleEditStudy}
+        initial={study}
+        mode="edit"
       />
     </div>
   );

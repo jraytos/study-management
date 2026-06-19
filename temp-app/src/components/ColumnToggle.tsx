@@ -14,8 +14,6 @@ const COLUMN_LABELS: { key: keyof ColumnVisibility; label: string }[] = [
   { key: "no",          label: "No."             },
   { key: "description", label: "Task Description" },
   { key: "images",      label: "Images"           },
-  { key: "subtasks",    label: "Subtasks"          },
-  { key: "boxPath",     label: "Box Path"          },
 ];
 
 interface Props {
