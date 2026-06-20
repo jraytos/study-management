@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Task, ItemColor, ColumnItem } from "@/lib/storage";
+import {
+  Task, ItemColor, ColumnItem,
+  FilepathCategory, FilepathItem,
+  getFilepathCategories, getFilepathItems,
+} from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,13 +80,17 @@ function ColumnEditor({
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className={`rounded-md border p-3 space-y-2.5 ${CELL_BG[item.color]}`}>
-      {/* Header: label + color picker */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Column {index + 1}
-        </span>
-        <div className="flex gap-1.5">
+    <div className={`rounded-md border p-2.5 ${CELL_BG[item.color]}`}>
+      {/* Column label */}
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
+        Column {index + 1}
+      </span>
+
+      {/* Three columns: color | description | images */}
+      <div className="flex items-start gap-2">
+
+        {/* Color picker — vertical stack */}
+        <div className="flex flex-col gap-1.5 pt-1 shrink-0">
           {COLORS.map((c) => (
             <button
               key={c.value}
@@ -97,56 +105,57 @@ function ColumnEditor({
             />
           ))}
         </div>
-      </div>
 
-      {/* Description */}
-      <textarea
-        rows={2}
-        value={item.description}
-        onChange={(e) => onChange({ description: e.target.value })}
-        placeholder="Description (optional)..."
-        className="w-full rounded border border-input bg-white/70 px-2 py-1.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-      />
+        {/* Description — grows to fill available space */}
+        <textarea
+          rows={3}
+          value={item.description}
+          onChange={(e) => onChange({ description: e.target.value })}
+          placeholder="Description (optional)..."
+          className="flex-1 min-w-0 rounded border border-input bg-white/70 px-2 py-1.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+        />
 
-      {/* Images — no placeholder when 0; add button shown only when < 2 */}
-      <div className="flex flex-wrap gap-1.5">
-        {item.images.map((url, i) => (
-          <div key={i} className="relative group w-14 h-14 rounded overflow-hidden border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="w-full h-full object-cover" />
+        {/* Images */}
+        <div className="flex flex-col gap-1 shrink-0">
+          {item.images.map((url, i) => (
+            <div key={i} className="relative group w-14 h-14 rounded overflow-hidden border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => onChange({ images: item.images.filter((_, j) => j !== i) })}
+                className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="h-2.5 w-2.5 text-white" />
+              </button>
+            </div>
+          ))}
+          {item.images.length < 2 && (
             <button
               type="button"
-              onClick={() => onChange({ images: item.images.filter((_, j) => j !== i) })}
-              className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => fileRef.current?.click()}
+              className="w-14 h-14 rounded border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:border-primary hover:text-primary transition-colors bg-white/50"
             >
-              <X className="h-2.5 w-2.5 text-white" />
+              <ImageIcon className="h-4 w-4" />
+              <span className="text-[10px]">Add</span>
             </button>
-          </div>
-        ))}
-        {item.images.length < 2 && (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="w-14 h-14 rounded border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:border-primary hover:text-primary transition-colors bg-white/50"
-          >
-            <ImageIcon className="h-4 w-4" />
-            <span className="text-[10px]">Add</span>
-          </button>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept="image/*"
-          className="hidden"
-          onChange={async (e) => {
-            if (!e.target.files) return;
-            const remaining = 2 - item.images.length;
-            const urls = await readFiles(e.target.files, remaining);
-            onChange({ images: [...item.images, ...urls] });
-            e.target.value = "";
-          }}
-        />
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              if (!e.target.files) return;
+              const remaining = 2 - item.images.length;
+              const urls = await readFiles(e.target.files, remaining);
+              onChange({ images: [...item.images, ...urls] });
+              e.target.value = "";
+            }}
+          />
+        </div>
+
       </div>
     </div>
   );
@@ -162,17 +171,33 @@ interface Props {
   onSubmit: (data: TaskFormData, taskId?: string) => void;
 }
 
+const MANUAL_VALUE = "__manual__";
+
 // ── Dialog ─────────────────────────────────────────────────────────────────────
 export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: Props) {
   const [data, setData] = useState<TaskFormData>(() => blankData(numColumns, task ?? undefined));
   const taskImgRef = useRef<HTMLInputElement>(null);
+
+  // Filepath repository
+  const [fpCategories, setFpCategories] = useState<FilepathCategory[]>([]);
+  const [fpItems, setFpItems]           = useState<FilepathItem[]>([]);
+  const [manualBox, setManualBox]       = useState(false);
 
   const isEdit = !!task;
   const title  = isEdit ? `Edit Row #${task!.no}` : "Add Task";
 
   // Re-initialise whenever the dialog opens
   useEffect(() => {
-    if (open) setData(blankData(numColumns, task ?? undefined));
+    if (open) {
+      setData(blankData(numColumns, task ?? undefined));
+      const cats  = getFilepathCategories();
+      const items = getFilepathItems();
+      setFpCategories(cats);
+      setFpItems(items);
+      // If the task's existing boxPath matches a known item, keep select mode; else manual
+      const exists = items.some((it) => it.filepath === (task?.boxPath ?? ""));
+      setManualBox(!exists && !!(task?.boxPath));
+    }
   }, [open, task, numColumns]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -261,17 +286,6 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
               </div>
             </div>
 
-            {/* ── Box File Path ───────────────────────────────────── */}
-            <div className="space-y-1.5">
-              <Label htmlFor="td-box">Box File Path</Label>
-              <Input
-                id="td-box"
-                value={data.boxPath}
-                onChange={(e) => setData((d) => ({ ...d, boxPath: e.target.value }))}
-                placeholder="e.g. /studies/trial-a/box-1"
-              />
-            </div>
-
             {/* ── Column items ─────────────────────────────────────── */}
             {numColumns > 0 && (
               <div className="space-y-2.5">
@@ -286,6 +300,73 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
                 ))}
               </div>
             )}
+
+            {/* ── Box File Path ───────────────────────────────────── */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="td-box">Box File Path</Label>
+                {fpItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualBox((v) => {
+                        if (v) { setData((d) => ({ ...d, boxPath: "" })); }
+                        return !v;
+                      });
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    {manualBox ? "Pick from list" : "Enter manually"}
+                  </button>
+                )}
+              </div>
+
+              {fpItems.length === 0 || manualBox ? (
+                <Input
+                  id="td-box"
+                  value={data.boxPath}
+                  onChange={(e) => setData((d) => ({ ...d, boxPath: e.target.value }))}
+                  placeholder="e.g. /studies/trial-a/box-1"
+                />
+              ) : (
+                <select
+                  id="td-box"
+                  value={data.boxPath}
+                  onChange={(e) => setData((d) => ({ ...d, boxPath: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">— Select a file path —</option>
+                  {fpCategories.map((cat) => {
+                    const catItems = fpItems.filter((it) => it.categoryId === cat.id);
+                    if (catItems.length === 0) return null;
+                    return (
+                      <optgroup key={cat.id} label={cat.name}>
+                        {catItems.map((item) => (
+                          <option key={item.id} value={item.filepath}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+              )}
+
+              {!manualBox && data.boxPath && (() => {
+                const match = fpItems.find((it) => it.filepath === data.boxPath);
+                return match ? (
+                  <a
+                    href={match.filepath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: match.color }}
+                    className="text-xs hover:underline break-all inline-flex items-center gap-1 mt-0.5"
+                  >
+                    {match.filepath}
+                  </a>
+                ) : null;
+              })()}
+            </div>
           </div>
 
           <DialogFooter className="px-6 py-4 border-t shrink-0">

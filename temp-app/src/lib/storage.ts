@@ -150,3 +150,45 @@ export function saveColumnVisibility(studyId: string, vis: ColumnVisibility): vo
 export function generateId(): string {
   return crypto.randomUUID();
 }
+
+// ── Filepath Management ───────────────────────────────────────────────────────
+
+export interface FilepathCategory {
+  id: string;
+  name: string;
+}
+
+export interface FilepathItem {
+  id: string;
+  categoryId: string;
+  name: string;
+  filepath: string;
+  color: string; // hex, default "#3b82f6" (blue)
+}
+
+const FP_CATEGORIES_KEY = "as_fp_categories";
+const FP_ITEMS_KEY      = "as_fp_items";
+
+export function getFilepathCategories(): FilepathCategory[] {
+  if (!isBrowser()) return [];
+  const raw = localStorage.getItem(FP_CATEGORIES_KEY);
+  if (!raw) return [];
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+export function saveFilepathCategories(cats: FilepathCategory[]): void {
+  localStorage.setItem(FP_CATEGORIES_KEY, JSON.stringify(cats));
+}
+
+export function getFilepathItems(): FilepathItem[] {
+  if (!isBrowser()) return [];
+  const raw = localStorage.getItem(FP_ITEMS_KEY);
+  if (!raw) return [];
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+export function saveFilepathItems(items: FilepathItem[]): void {
+  localStorage.setItem(FP_ITEMS_KEY, JSON.stringify(items));
+}

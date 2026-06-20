@@ -1,7 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
-import { Task, ColumnVisibility } from "@/lib/storage";
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
+import { Task, ColumnVisibility, FilepathItem, getFilepathItems } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
 import { TaskDialog, TaskFormData, CELL_BG } from "@/components/TaskDialog";
@@ -29,7 +29,10 @@ const tdBase = "text-sm border-b";
 export function TaskTable({ tasks, numColumns, visibility, onChange }: Props) {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [fpItems, setFpItems] = useState<FilepathItem[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setFpItems(getFilepathItems()); }, []);
 
   // Sync row heights across the three independent table panels
   useLayoutEffect(() => {
@@ -214,7 +217,20 @@ export function TaskTable({ tasks, numColumns, visibility, onChange }: Props) {
                 : tasks.map((task) => (
                   <tr key={task.id} className="group">
                     <td className={`${tdBase} border-r bg-background px-3 py-2`} style={{ width: BOX_W }}>
-                      {task.boxPath || <span className="text-muted-foreground">—</span>}
+                      {task.boxPath ? (() => {
+                        const match = fpItems.find((it) => it.filepath === task.boxPath);
+                        return (
+                          <a
+                            href={task.boxPath}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: match?.color ?? "var(--primary)" }}
+                            className="hover:underline break-all text-sm"
+                          >
+                            {task.boxPath}
+                          </a>
+                        );
+                      })() : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="bg-background border-b px-1 py-1" style={{ width: ACT_W }}>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
