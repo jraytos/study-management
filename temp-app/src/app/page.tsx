@@ -7,7 +7,7 @@ import { CreateStudyDialog } from "@/components/CreateStudyDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, FlaskConical, Pencil, FolderOpen } from "lucide-react";
+import { Plus, Trash2, FlaskConical, Pencil } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
@@ -53,16 +53,10 @@ export default function HomePage() {
             <FlaskConical className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold tracking-tight">AS Project Management</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => router.push("/filepaths")} className="gap-2">
-              <FolderOpen className="h-4 w-4" />
-              File Paths
-            </Button>
-            <Button onClick={() => setCreateOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Study
-            </Button>
-          </div>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Study
+          </Button>
         </div>
       </header>
 

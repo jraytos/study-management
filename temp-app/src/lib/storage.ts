@@ -5,7 +5,7 @@ export interface Study {
   numColumns: number; // 0–100, defined at study level
 }
 
-export type ItemColor = "gray" | "red" | "green";
+export type ItemColor = "gray" | "yellow" | "green";
 
 /** One column cell within a task row — fully independent data object */
 export interface ColumnItem {
@@ -82,7 +82,9 @@ export function getStudyById(id: string): Study | undefined {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normaliseColumnItem(raw: any): ColumnItem {
   const color: ItemColor =
-    raw?.color === "red" || raw?.color === "green" ? raw.color : "gray";
+    raw?.color === "yellow" || raw?.color === "green" ? raw.color
+    : raw?.color === "red" ? "yellow"  // migrate old red → yellow
+    : "gray";
   return {
     color,
     description: raw?.description ?? "",

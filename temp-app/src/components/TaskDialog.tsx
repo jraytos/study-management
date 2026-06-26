@@ -5,6 +5,7 @@ import {
   Task, ItemColor, ColumnItem,
   FilepathCategory, FilepathItem,
   getFilepathCategories, getFilepathItems,
+  saveFilepathCategories, saveFilepathItems, generateId,
 } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,19 +17,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ImageIcon, X } from "lucide-react";
-
-// ── Color palette ────────────────────────────────────────────────────────────
-const COLORS: { value: ItemColor; label: string; swatch: string; activeBg: string; activeRing: string }[] = [
-  { value: "gray",  label: "Gray",  swatch: "bg-gray-300",  activeBg: "bg-gray-100",  activeRing: "ring-gray-400"  },
-  { value: "red",   label: "Red",   swatch: "bg-red-400",   activeBg: "bg-red-50",    activeRing: "ring-red-400"   },
-  { value: "green", label: "Green", swatch: "bg-green-400", activeBg: "bg-green-50",  activeRing: "ring-green-500" },
-];
+import { ImageIcon, X, Plus } from "lucide-react";
 
 export const CELL_BG: Record<ItemColor, string> = {
-  gray:  "bg-gray-100",
-  red:   "bg-red-50",
-  green: "bg-green-50",
+  gray:   "bg-gray-100",
+  yellow: "bg-yellow-50",
+  green:  "bg-green-50",
 };
 
 // ── Shared form data ─────────────────────────────────────────────────────────
@@ -79,32 +73,23 @@ function ColumnEditor({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Effective color for display: green shows as yellow background in editor
+  const displayColor = item.color === "green" ? "yellow" : item.color;
+
   return (
-    <div className={`rounded-md border p-2.5 ${CELL_BG[item.color]}`}>
-      {/* Column label */}
-      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
-        Column {index + 1}
-      </span>
+    <div className={`rounded-md border p-2.5 ${CELL_BG[displayColor]}`}>
+      {/* Column label — click to toggle gray ↔ yellow */}
+      <button
+        type="button"
+        onClick={() => onChange({ color: item.color === "yellow" || item.color === "green" ? "gray" : "yellow" })}
+        title="Click to toggle color"
+        className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block hover:text-foreground transition-colors cursor-pointer select-none"
+      >
+        Column {index + 1} {item.color !== "gray" ? "●" : "○"}
+      </button>
 
-      {/* Three columns: color | description | images */}
+      {/* Three columns: description | images */}
       <div className="flex items-start gap-2">
-
-        {/* Color picker — vertical stack */}
-        <div className="flex flex-col gap-1.5 pt-1 shrink-0">
-          {COLORS.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              title={c.label}
-              onClick={() => onChange({ color: c.value })}
-              className={`w-5 h-5 rounded-full ${c.swatch} border transition-transform ${
-                item.color === c.value
-                  ? `ring-2 ring-offset-1 ${c.activeRing} scale-110`
-                  : "border-gray-300 hover:scale-105"
-              }`}
-            />
-          ))}
-        </div>
 
         {/* Description — grows to fill available space */}
         <textarea
@@ -182,6 +167,10 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
   const [fpCategories, setFpCategories] = useState<FilepathCategory[]>([]);
   const [fpItems, setFpItems]           = useState<FilepathItem[]>([]);
   const [manualBox, setManualBox]       = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [qaName, setQaName]            = useState("");
+  const [qaPath, setQaPath]            = useState("");
+  const [qaCatId, setQaCatId]          = useState("");
 
   const isEdit = !!task;
   const title  = isEdit ? `Edit Row #${task!.no}` : "Add Task";
@@ -204,6 +193,27 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
     e.preventDefault();
     onSubmit(data, task?.id);
     onOpenChange(false);
+  }
+
+  function handleQuickAdd() {
+    if (!qaName.trim() || !qaPath.trim()) return;
+    const cats = getFilepathCategories();
+    let catId = qaCatId;
+    if (!catId) {
+      const newCat: FilepathCategory = { id: generateId(), name: "General" };
+      cats.push(newCat);
+      saveFilepathCategories(cats);
+      catId = newCat.id;
+    }
+    const newItem: FilepathItem = { id: generateId(), categoryId: catId, name: qaName.trim(), filepath: qaPath.trim(), color: "#3b82f6" };
+    const allItems = [...getFilepathItems(), newItem];
+    saveFilepathItems(allItems);
+    setFpCategories(cats);
+    setFpItems(allItems);
+    setData((d) => ({ ...d, boxPath: newItem.filepath }));
+    setShowQuickAdd(false);
+    setQaName(""); setQaPath(""); setQaCatId("");
+    setManualBox(false);
   }
 
   function updateItem(colIdx: number, changes: Partial<ColumnItem>) {
@@ -303,22 +313,34 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
 
             {/* ── Box File Path ───────────────────────────────────── */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <Label htmlFor="td-box">Box File Path</Label>
-                {fpItems.length > 0 && (
+                <div className="flex items-center gap-2">
+                  {fpItems.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualBox((v) => {
+                          if (v) { setData((d) => ({ ...d, boxPath: "" })); }
+                          return !v;
+                        });
+                        setShowQuickAdd(false);
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
+                    >
+                      {manualBox ? "Pick from list" : "Enter manually"}
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => {
-                      setManualBox((v) => {
-                        if (v) { setData((d) => ({ ...d, boxPath: "" })); }
-                        return !v;
-                      });
-                    }}
-                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                    onClick={() => { setShowQuickAdd((v) => !v); setQaName(""); setQaPath(""); setQaCatId(fpCategories[0]?.id ?? ""); }}
+                    className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
+                    title="Add new file path"
                   >
-                    {manualBox ? "Pick from list" : "Enter manually"}
+                    <Plus className="h-3.5 w-3.5" />
+                    Add new
                   </button>
-                )}
+                </div>
               </div>
 
               {fpItems.length === 0 || manualBox ? (
@@ -355,10 +377,7 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
               {!manualBox && data.boxPath && (() => {
                 const match = fpItems.find((it) => it.filepath === data.boxPath);
                 return match ? (
-                  <a
-                    href={match.filepath}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <a href={match.filepath} target="_blank" rel="noopener noreferrer"
                     style={{ color: match.color }}
                     className="text-xs hover:underline break-all inline-flex items-center gap-1 mt-0.5"
                   >
@@ -366,6 +385,38 @@ export function TaskDialog({ open, onOpenChange, numColumns, task, onSubmit }: P
                   </a>
                 ) : null;
               })()}
+
+              {/* Quick-add inline form */}
+              {showQuickAdd && (
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2 mt-1">
+                  <p className="text-xs font-semibold text-muted-foreground">Add new file path to repository</p>
+                  {fpCategories.length > 0 && (
+                    <select
+                      value={qaCatId}
+                      onChange={(e) => setQaCatId(e.target.value)}
+                      className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm focus-visible:outline-none"
+                    >
+                      {fpCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  )}
+                  <Input
+                    value={qaName}
+                    onChange={(e) => setQaName(e.target.value)}
+                    placeholder="Name"
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    value={qaPath}
+                    onChange={(e) => setQaPath(e.target.value)}
+                    placeholder="Filepath / URL"
+                    className="h-8 text-sm"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowQuickAdd(false)}>Cancel</Button>
+                    <Button type="button" size="sm" className="h-7 text-xs" disabled={!qaName.trim() || !qaPath.trim()} onClick={handleQuickAdd}>Add</Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

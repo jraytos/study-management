@@ -258,9 +258,9 @@ export default function FilepathsPage() {
   const visibleItems = items.filter((it) => it.categoryId === selectedCatId);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b bg-card shadow-sm shrink-0">
+      <header className="border-b bg-card shadow-sm shrink-0 sticky top-0 z-20">
         <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
@@ -273,7 +273,7 @@ export default function FilepathsPage() {
       </header>
 
       {/* Body */}
-      <div className="flex flex-1 overflow-hidden max-w-screen-2xl w-full mx-auto px-6 py-6 gap-6">
+      <div className="flex flex-1 overflow-hidden max-w-screen-2xl w-full mx-auto px-6 py-6 gap-6 min-h-0">
 
         {/* Sidebar — categories */}
         <aside className="w-56 shrink-0 flex flex-col gap-2">
@@ -359,14 +359,14 @@ export default function FilepathsPage() {
                 </Button>
               </div>
 
-              <div className="rounded-md border overflow-hidden">
+              <div className="rounded-md border overflow-auto flex-1">
                 <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-muted/50">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="bg-muted">
                       <th className="text-left font-semibold px-4 py-2.5 border-b border-r w-48">Name</th>
                       <th className="text-left font-semibold px-4 py-2.5 border-b border-r">Filepath</th>
                       <th className="text-left font-semibold px-4 py-2.5 border-b border-r w-24">Color</th>
-                      <th className="border-b w-20" />
+                      <th className="bg-muted border-b w-20" />
                     </tr>
                   </thead>
                   <tbody>

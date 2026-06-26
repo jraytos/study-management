@@ -19,7 +19,7 @@ import { ColumnToggle } from "@/components/ColumnToggle";
 import { TaskDialog, TaskFormData } from "@/components/TaskDialog";
 import { CreateStudyDialog } from "@/components/CreateStudyDialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, FolderOpen } from "lucide-react";
 
 export default function StudyPage() {
   const { id } = useParams<{ id: string }>();
@@ -82,8 +82,8 @@ export default function StudyPage() {
   if (!study || !visibility) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card shadow-sm">
+    <div className="h-screen flex flex-col bg-background">
+      <header className="border-b bg-card shadow-sm sticky top-0 z-20 shrink-0">
         <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
@@ -106,6 +106,10 @@ export default function StudyPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <ColumnToggle visibility={visibility} onChange={handleVisibilityChange} />
+            <Button variant="outline" size="sm" onClick={() => router.push("/filepaths")} className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              File Paths
+            </Button>
             <Button onClick={() => setAddOpen(true)} size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
               Add Task
@@ -114,13 +118,15 @@ export default function StudyPage() {
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-6 py-6">
-        <TaskTable
-          tasks={tasks}
-          numColumns={study.numColumns}
-          visibility={visibility}
-          onChange={handleTasksChange}
-        />
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-screen-2xl mx-auto px-6 py-6">
+          <TaskTable
+            tasks={tasks}
+            numColumns={study.numColumns}
+            visibility={visibility}
+            onChange={handleTasksChange}
+          />
+        </div>
       </main>
 
       {/* Add Task — same form as Edit, no pre-fill */}
