@@ -84,7 +84,7 @@ export default function StudyPage() {
   return (
     <div className="h-screen flex flex-col bg-background">
       <header className="border-b bg-card shadow-sm sticky top-0 z-20 shrink-0">
-        <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center gap-4">
+        <div className="w-full px-6 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -119,7 +119,7 @@ export default function StudyPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-screen-2xl mx-auto px-6 py-6">
+        <div className="w-full px-6 py-6">
           <TaskTable
             tasks={tasks}
             numColumns={study.numColumns}

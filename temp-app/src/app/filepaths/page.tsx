@@ -22,8 +22,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Pencil, Trash2, FolderOpen, ExternalLink } from "lucide-react";
+import { toHref } from "@/components/TaskDialog";
 
 const DEFAULT_COLOR = "#3b82f6";
+
+const COLOR_PALETTE = [
+  "#ef4444", "#f97316", "#f59e0b", "#84cc16",
+  "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6",
+  "#6366f1", "#8b5cf6", "#d946ef", "#f43f5e",
+  "#64748b", "#0f172a", "#78716c", "#1d4ed8",
+];
 
 // ── Category Dialog ───────────────────────────────────────────────────────────
 function CategoryDialog({
@@ -139,25 +147,23 @@ function ItemDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="item-color">Color</Label>
-            <div className="flex items-center gap-3">
-              <input
-                id="item-color"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-9 w-16 cursor-pointer rounded border border-input p-0.5"
-              />
-              <span className="text-sm font-mono text-muted-foreground">{color}</span>
-              <button
-                type="button"
-                onClick={() => setColor(DEFAULT_COLOR)}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                Reset to blue
-              </button>
+            <Label>Color</Label>
+            <div className="grid grid-cols-8 gap-1.5">
+              {COLOR_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  title={c}
+                  style={{ backgroundColor: c }}
+                  className={`w-7 h-7 rounded transition-transform hover:scale-110 ${
+                    color === c
+                      ? "ring-2 ring-offset-2 ring-foreground scale-110"
+                      : ""
+                  }`}
+                />
+              ))}
             </div>
-            {/* Live preview */}
             {filepath.trim() && (
               <p className="text-sm mt-1">
                 Preview:{" "}
@@ -382,7 +388,7 @@ export default function FilepathsPage() {
                           <td className="px-4 py-3 border-r font-medium">{item.name}</td>
                           <td className="px-4 py-3 border-r">
                             <a
-                              href={item.filepath}
+                              href={toHref(item.filepath)}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ color: item.color }}

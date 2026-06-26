@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { Task, ColumnVisibility, FilepathItem, getFilepathItems } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
-import { TaskDialog, TaskFormData, CELL_BG } from "@/components/TaskDialog";
+import { TaskDialog, TaskFormData, CELL_BG, toHref } from "@/components/TaskDialog";
 import { Trash2, Pencil } from "lucide-react";
 
 interface Props {
@@ -277,7 +277,7 @@ export function TaskTable({ tasks, numColumns, visibility, onChange }: Props) {
                           const match = fpItems.find((it) => it.filepath === task.boxPath);
                           return (
                             <a
-                              href={task.boxPath}
+                              href={toHref(task.boxPath)}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ color: match?.color ?? "var(--primary)" }}
