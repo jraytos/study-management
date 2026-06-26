@@ -5,119 +5,192 @@ import { useRouter } from "next/navigation";
 import { Study, getStudies, saveStudy, deleteStudy, generateId } from "@/lib/storage";
 import { CreateStudyDialog } from "@/components/CreateStudyDialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, FlaskConical, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2, FlaskConical, ImageIcon } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
-  const [studies, setStudies] = useState<Study[]>([]);
+  const [projects, setProjects] = useState<Study[]>([]);
+  const [selected, setSelected] = useState<Study | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Study | null>(null);
 
   useEffect(() => {
-    setStudies(getStudies());
+    const s = getStudies();
+    setProjects(s);
+    if (s.length > 0) setSelected(s[0]);
   }, []);
 
-  function handleCreate(name: string, numColumns: number) {
-    const study: Study = {
+  function handleCreate(name: string, numColumns: number, description: string, images: string[]) {
+    const project: Study = {
       id: generateId(),
       name,
       createdAt: new Date().toISOString(),
       numColumns,
+      description,
+      images,
     };
-    saveStudy(study);
-    setStudies(getStudies());
+    saveStudy(project);
+    const updated = getStudies();
+    setProjects(updated);
+    setSelected(project);
   }
 
-  function handleEdit(name: string, numColumns: number) {
+  function handleEdit(name: string, numColumns: number, description: string, images: string[]) {
     if (!editTarget) return;
-    const updated: Study = { ...editTarget, name, numColumns };
+    const updated: Study = { ...editTarget, name, numColumns, description, images };
     saveStudy(updated);
-    setStudies(getStudies());
+    const all = getStudies();
+    setProjects(all);
+    setSelected(updated);
     setEditTarget(null);
   }
 
-  function handleDelete(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    if (!confirm("Delete this study and all its tasks?")) return;
+  function handleDelete(id: string) {
+    if (!confirm("Delete this project and all its tasks?")) return;
     deleteStudy(id);
-    setStudies(getStudies());
+    const remaining = getStudies();
+    setProjects(remaining);
+    setSelected(remaining[0] ?? null);
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div className="h-screen bg-gray-100 flex flex-col">
+      {/* Header */}
+      <header className="border-b bg-white shadow-sm shrink-0">
+        <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FlaskConical className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold tracking-tight">AS Project Management</h1>
           </div>
           <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
-            New Study
+            New Project
           </Button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {studies.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
-            <FlaskConical className="h-12 w-12 text-muted-foreground" />
-            <div>
-              <h2 className="text-lg font-semibold">No studies yet</h2>
-              <p className="text-muted-foreground text-sm mt-1">
-                Create your first study to start managing tasks.
-              </p>
-            </div>
-            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+      {/* Body */}
+      <main className="flex flex-1 gap-4 p-6 min-h-0">
+
+        {/* Left — scrollable project list */}
+        <div className="w-52 shrink-0 bg-white rounded-lg shadow flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b shrink-0">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Projects
+            </span>
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="New project"
+            >
               <Plus className="h-4 w-4" />
-              Create Study
-            </Button>
+            </button>
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {studies.map((study) => (
-              <Card
-                key={study.id}
-                className="cursor-pointer hover:shadow-md transition-shadow group"
-                onClick={() => router.push(`/studies/${study.id}`)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base leading-snug">{study.name}</CardTitle>
-                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        onClick={(e) => { e.stopPropagation(); setEditTarget(study); }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => handleDelete(study.id, e)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {projects.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-4 py-4 text-center">
+                No projects yet.
+              </p>
+            ) : (
+              projects.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => setSelected(p)}
+                  className={`relative flex items-center gap-2 px-4 py-3 cursor-pointer border-b text-sm transition-colors group ${
+                    selected?.id === p.id
+                      ? "bg-gray-50 font-medium"
+                      : "hover:bg-gray-50 text-muted-foreground"
+                  }`}
+                >
+                  {selected?.id === p.id && (
+                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-red-500" />
+                  )}
+                  <span className="flex-1 truncate pl-1">{p.name}</span>
+                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setEditTarget(p); }}
+                      className="p-0.5 rounded hover:bg-gray-200 text-muted-foreground hover:text-foreground"
+                      title="Edit"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
+                      className="p-0.5 rounded hover:bg-gray-200 text-red-400 hover:text-red-600"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
-                </CardHeader>
-                <CardContent className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {new Date(study.createdAt).toLocaleDateString()}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {study.numColumns} col{study.numColumns !== 1 ? "s" : ""}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Right — project detail */}
+        <div className="flex-1 bg-white rounded-lg shadow flex flex-col overflow-hidden min-w-0">
+          {!selected ? (
+            <div className="flex flex-col items-center justify-center flex-1 gap-4 text-muted-foreground">
+              <FlaskConical className="h-12 w-12" />
+              <p className="text-sm">Select or create a project to get started.</p>
+              <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                New Project
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col flex-1 p-8 min-h-0">
+              <div className="mb-5 space-y-1.5 shrink-0">
+                <p className="text-sm">
+                  <span className="font-semibold">Project Name: </span>
+                  <span className="text-muted-foreground">{selected.name}</span>
+                </p>
+                <p className="text-sm">
+                  <span className="font-semibold">Project Protocol: </span>
+                  <span className="text-muted-foreground">
+                    {selected.description || <em className="not-italic opacity-50">—</em>}
+                  </span>
+                </p>
+              </div>
+
+              {/* Image area */}
+              <div className="flex-1 flex items-center justify-center bg-pink-50 rounded-lg border border-pink-100 min-h-0 mb-6 overflow-hidden">
+                {selected.images && selected.images.length > 0 ? (
+                  <div className="flex flex-wrap gap-4 p-6 justify-center items-center">
+                    {selected.images.map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={url}
+                        alt=""
+                        className="max-h-64 max-w-sm rounded-md object-contain shadow-sm"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 text-pink-200 select-none">
+                    <ImageIcon className="h-20 w-20" />
+                    <span className="text-lg font-medium text-pink-300">Project Image</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center shrink-0">
+                <Button
+                  onClick={() => router.push(`/studies/${selected.id}`)}
+                  size="lg"
+                  className="px-16"
+                >
+                  Start
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
 
       <CreateStudyDialog

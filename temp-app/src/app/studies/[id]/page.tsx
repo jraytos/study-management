@@ -70,9 +70,9 @@ export default function StudyPage() {
   );
 
   const handleEditStudy = useCallback(
-    (name: string, numColumns: number) => {
+    (name: string, numColumns: number, description: string, images: string[]) => {
       if (!study) return;
-      const updated: Study = { ...study, name, numColumns };
+      const updated: Study = { ...study, name, numColumns, description, images };
       saveStudy(updated);
       setStudy(updated);
     },
@@ -101,7 +101,7 @@ export default function StudyPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              {tasks.length} task{tasks.length !== 1 ? "s" : ""} · {study.numColumns} column{study.numColumns !== 1 ? "s" : ""}
+              {tasks.length} task{tasks.length !== 1 ? "s" : ""} · {study.numColumns} column{study.numColumns !== 1 ? "s" : ""} · Project
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
