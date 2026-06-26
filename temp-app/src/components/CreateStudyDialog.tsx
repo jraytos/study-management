@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Study } from "@/lib/storage";
+import { TEMPLATES } from "@/lib/templates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,8 @@ import { ImageIcon, X } from "lucide-react";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (name: string, numColumns: number, description: string, images: string[]) => void;
-  initial?: Pick<Study, "name" | "numColumns" | "description" | "images">;
+  onSubmit: (name: string, numColumns: number, description: string, images: string[], templateId: string) => void;
+  initial?: Pick<Study, "name" | "numColumns" | "description" | "images" | "templateId">;
   mode?: "create" | "edit";
 }
 
@@ -41,6 +42,7 @@ export function CreateStudyDialog({ open, onOpenChange, onSubmit, initial, mode 
   const [numColumns, setNumColumns] = useState(String(initial?.numColumns ?? 5));
   const [description, setDescription] = useState(initial?.description ?? "");
   const [images, setImages]         = useState<string[]>(initial?.images ?? []);
+  const [templateId, setTemplateId] = useState(initial?.templateId ?? "default");
   const [nameError, setNameError]   = useState("");
   const [colError, setColError]     = useState("");
   const imgRef = useRef<HTMLInputElement>(null);
@@ -51,10 +53,17 @@ export function CreateStudyDialog({ open, onOpenChange, onSubmit, initial, mode 
       setNumColumns(String(initial?.numColumns ?? 5));
       setDescription(initial?.description ?? "");
       setImages(initial?.images ? [...initial.images] : []);
+      setTemplateId(initial?.templateId ?? "default");
       setNameError("");
       setColError("");
     }
   }, [open, initial]);
+
+  function handleTemplateSelect(id: string) {
+    const tpl = TEMPLATES.find((t) => t.id === id);
+    setTemplateId(id);
+    if (tpl) setNumColumns(String(tpl.defaultColumns));
+  }
 
   function validate() {
     let ok = true;
@@ -67,7 +76,7 @@ export function CreateStudyDialog({ open, onOpenChange, onSubmit, initial, mode 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit(name.trim(), parseInt(numColumns, 10), description.trim(), images);
+    onSubmit(name.trim(), parseInt(numColumns, 10), description.trim(), images, templateId);
     onOpenChange(false);
   }
 
@@ -86,6 +95,31 @@ export function CreateStudyDialog({ open, onOpenChange, onSubmit, initial, mode 
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+
+          {/* Template picker */}
+          {mode === "create" && (
+            <div className="space-y-1">
+              <Label>Template</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => handleTemplateSelect(tpl.id)}
+                    className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                      templateId === tpl.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <p className="text-sm font-medium leading-tight">{tpl.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tpl.description}</p>
+                    <p className="text-xs font-semibold text-primary mt-1">{tpl.defaultColumns} cols</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Name */}
           <div className="space-y-1">

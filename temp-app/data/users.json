@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "name": "Admin",
+    "email": "admin@admin.com",
+    "passwordHash": "$2b$10$zEK2OQ6hfgV5T11vYP.sRuRqOf5gsKGDnxznsYuV/3RZoKzUNlaQu",
+    "role": "admin"
+  },
+  {
+    "id": "228ee77356f1a2d5a05da5a326",
+    "name": "Jo",
+    "email": "joselito.raytos@signanthealth.com",
+    "passwordHash": "$2b$10$nDzfQuIWK2ABBua79qzioOuCTjHfOwK3AKhrsa/nbLOJdvFIB.bgi",
+    "role": "user"
+  }
+]

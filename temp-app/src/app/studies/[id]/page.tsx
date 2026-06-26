@@ -20,11 +20,13 @@ import { TaskDialog, TaskFormData } from "@/components/TaskDialog";
 import { CreateStudyDialog } from "@/components/CreateStudyDialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Pencil, FolderOpen } from "lucide-react";
+import { SessionPayload } from "@/lib/session-types";
 
 export default function StudyPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
+  const [session, setSession] = useState<SessionPayload | null>(null);
   const [study, setStudy] = useState<Study | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [visibility, setVisibility] = useState<ColumnVisibility | null>(null);
@@ -32,6 +34,9 @@ export default function StudyPage() {
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
+    fetch("/api/session")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => setSession(data));
     const s = getStudyById(id);
     if (!s) { router.replace("/"); return; }
     setStudy(s);
@@ -70,9 +75,9 @@ export default function StudyPage() {
   );
 
   const handleEditStudy = useCallback(
-    (name: string, numColumns: number, description: string, images: string[]) => {
+    (name: string, numColumns: number, description: string, images: string[], templateId: string) => {
       if (!study) return;
-      const updated: Study = { ...study, name, numColumns, description, images };
+      const updated: Study = { ...study, name, numColumns, description, images, templateId };
       saveStudy(updated);
       setStudy(updated);
     },
@@ -91,17 +96,20 @@ export default function StudyPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold truncate">{study.name}</h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
-                onClick={() => setEditOpen(true)}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
+              {session?.role === "admin" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={() => setEditOpen(true)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {tasks.length} task{tasks.length !== 1 ? "s" : ""} · {study.numColumns} column{study.numColumns !== 1 ? "s" : ""} · Project
+              {session && <span> · {session.name}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -137,14 +145,16 @@ export default function StudyPage() {
         onSubmit={handleAddSubmit}
       />
 
-      {/* Edit Study */}
-      <CreateStudyDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        onSubmit={handleEditStudy}
-        initial={study}
-        mode="edit"
-      />
+      {/* Edit Study — admin only */}
+      {session?.role === "admin" && (
+        <CreateStudyDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSubmit={handleEditStudy}
+          initial={study}
+          mode="edit"
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ export interface Study {
   numColumns: number; // 0–100, defined at study level
   description: string;
   images: string[];   // project-level images
+  templateId?: string;
 }
 
 export type ItemColor = "gray" | "yellow" | "green";
@@ -53,6 +54,7 @@ function normaliseStudy(s: any): Study {
         : 0,
     description: s.description ?? "",
     images: Array.isArray(s.images) ? s.images : [],
+    templateId: s.templateId,
   };
 }
 
